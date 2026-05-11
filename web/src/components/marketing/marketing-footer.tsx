@@ -1,4 +1,3 @@
-import { Link } from "@/i18n/navigation";
 import { siteConfig } from "@/config/site";
 
 export function MarketingFooter() {
@@ -9,12 +8,22 @@ export function MarketingFooter() {
           &copy; {new Date().getFullYear()} {siteConfig.name}. Open source under MIT license.
         </p>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <Link href="/terms" className="hover:text-foreground transition-colors">
+          <a
+            href={siteConfig.legal.terms}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
             Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground transition-colors">
+          </a>
+          <a
+            href={siteConfig.legal.privacy}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
             Privacy
-          </Link>
+          </a>
           <a
             href={siteConfig.links.github}
             target="_blank"

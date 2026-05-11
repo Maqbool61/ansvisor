@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { Separator } from "@/components/ui/separator";
+import { siteConfig } from "@/config/site";
 
 export function SignUpForm() {
   const t = useTranslations("auth");
@@ -127,13 +128,23 @@ export function SignUpForm() {
 
       <p className="text-center text-xs text-muted-foreground">
         {t("termsAgreement")}{" "}
-        <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+        <a
+          href={siteConfig.legal.terms}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-4 hover:text-primary"
+        >
           {t("termsOfService")}
-        </Link>{" "}
+        </a>{" "}
         {t("and")}{" "}
-        <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+        <a
+          href={siteConfig.legal.privacy}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-4 hover:text-primary"
+        >
           {t("privacyPolicy")}
-        </Link>
+        </a>
         .
       </p>
     </form>
