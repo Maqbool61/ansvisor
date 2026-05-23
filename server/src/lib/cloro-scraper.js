@@ -93,7 +93,16 @@ export function parseScraperResponse(result, scraperId) {
       endIndex: idx * 100 + 50,
     }));
 
-    return { text, citations, model: 'google-aimode', shopping_cards: [] };
+    // AI Mode returns its product cards under camelCase `shoppingCards`
+    // (like Copilot — verified against the live response; not snake_case).
+    // Unwrap into the snake_case parsed key shared by all providers. Its
+    // separate `inlineProducts` array is a different surface, out of scope.
+    return {
+      text,
+      citations,
+      model: 'google-aimode',
+      shopping_cards: aiMode.shoppingCards ?? [],
+    };
   }
 
   const text = result.markdown || result.text || '';
