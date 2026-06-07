@@ -11,6 +11,7 @@ import {
   listContentOpportunitiesFor,
   listPromptsFor,
   listTopicsFor,
+  getPromptPerformanceFor,
 } from '@/lib/mcp/data';
 
 /**
@@ -166,6 +167,34 @@ export function buildAgentTools(auth: McpAuthContext) {
           impact: args.impact,
           type: args.type,
           limit: args.limit,
+        }),
+    }),
+
+    get_prompt_performance: tool({
+      description:
+        'Get aggregate performance metrics (average visibility, total mentions, citations, appearances, and competitor score) grouped by prompt over a date range. Use to answer questions like "what is the best-performing prompt today?" or "which prompts dropped this week?".',
+      inputSchema: z.object({
+        brand_id: z.string().uuid(),
+        date_from: z.string().optional(),
+        date_to: z.string().optional(),
+        topic_id: z.string().uuid().optional(),
+        sort_by: z.enum(['visibility', 'mentions', 'citations', 'appearances']).optional(),
+        order: z.enum(['desc', 'asc']).optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+        model: z.string().optional(),
+        region: z.string().optional(),
+      }),
+      execute: async (args) =>
+        getPromptPerformanceFor(auth, {
+          brandId: args.brand_id,
+          dateFrom: args.date_from,
+          dateTo: args.date_to,
+          topicId: args.topic_id,
+          sortBy: args.sort_by,
+          order: args.order,
+          limit: args.limit,
+          model: args.model,
+          region: args.region,
         }),
     }),
 

@@ -19,6 +19,7 @@ import {
   getPromptVolumesFor,
   listShoppingCards,
   getProductVisibility,
+  getPromptPerformanceFor,
 } from './data';
 
 /**
@@ -575,6 +576,66 @@ export function createMcpServer(auth: McpAuthContext): McpServer {
       if (result === null) {
         return {
           content: [{ type: 'text', text: 'Product or Brand not found' }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  server.registerTool(
+    'get_prompt_performance',
+    {
+      description:
+        'Get aggregate performance metrics (average visibility, total mentions, citations, appearances, and competitor score) grouped by prompt over a date range. Use to answer questions like "what is the best-performing prompt today?" or "which prompts dropped this week?".',
+      inputSchema: {
+        brand_id: relaxedUuid.describe('Brand UUID, from list_brands.'),
+        date_from: z
+          .string()
+          .optional()
+          .describe('Optional ISO timestamp (inclusive) lower bound, e.g. 2026-05-01T00:00:00Z.'),
+        date_to: z.string().optional().describe('Optional ISO timestamp (inclusive) upper bound.'),
+        topic_id: relaxedUuid
+          .optional()
+          .describe('Optional topic UUID (from list_topics) to filter to one topic.'),
+        sort_by: z
+          .enum(['visibility', 'mentions', 'citations', 'appearances'])
+          .optional()
+          .describe('Optional field to sort by. Default is "visibility".'),
+        order: z.enum(['desc', 'asc']).optional().describe('Sort order. Default is "desc".'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe('Optional limit on prompts returned (default 10, max 100).'),
+        model: z
+          .string()
+          .optional()
+          .describe(
+            'Optional model slug filter, or comma-separated list of slugs to filter a provider family.',
+          ),
+        region: z.string().optional().describe('Optional region code filter (e.g. "US", "TR").'),
+      },
+    },
+    async (args) => {
+      const result = await getPromptPerformanceFor(auth, {
+        brandId: args.brand_id,
+        dateFrom: args.date_from,
+        dateTo: args.date_to,
+        topicId: args.topic_id,
+        sortBy: args.sort_by,
+        order: args.order,
+        limit: args.limit,
+        model: args.model,
+        region: args.region,
+      });
+      if (result === null) {
+        return {
+          content: [{ type: 'text', text: 'Brand not found' }],
           isError: true,
         };
       }

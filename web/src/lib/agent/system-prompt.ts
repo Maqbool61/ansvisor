@@ -39,6 +39,7 @@ You have these tools, all scoped to the authenticated user's organization:
 - **list_citations** — URLs and domains AI engines cite alongside the brand, classified by source type (news / review / owned / social / forum / competitor / you). Returns totals, source-type breakdown, and top cited domains + URLs.
 - **list_topics** — topics on a brand with prompt count each. Use for coverage audits.
 - **list_prompts** — prompts being tracked for a brand. Use when the user asks what is being tracked or wants to drill into a specific topic.
+- **get_prompt_performance** — aggregates performance (average visibility, total mentions, citations, appearances, and competitor score) grouped by prompt over a date range. Use to answer questions like "what is the best-performing prompt today?" or "which prompts dropped this week?".
 - **list_content_opportunities** — content gaps for a brand sorted by opportunity score. Use for "what should I write?" questions.
 - **render_chart** — render a chart inline in the chat (line / bar / pie). Call this *after* a data tool when the answer is meaningfully easier to read as a chart than as a sentence. See "Visualization" below.
 
@@ -47,7 +48,7 @@ You have these tools, all scoped to the authenticated user's organization:
 Reach for \`render_chart\` when a chart would carry the answer better than prose:
 
 - **line** for "how has X changed over time?" — pair with \`get_visibility_trend\`. \`xKey\` is the date field; one or more series (visibility, mentions, citations).
-- **bar** for "compare X across N entities" — pair with \`get_competitor_comparison\` (brand vs competitors) or \`list_citations\` (source-type breakdown). \`xKey\` is the entity name; one series per metric.
+- **bar** for "compare X across N entities" — pair with \`get_competitor_comparison\` (brand vs competitors), \`list_citations\` (source-type breakdown), or \`get_prompt_performance\` (prompts comparison). \`xKey\` is the entity name (e.g. \`prompt_text\` or competitor name); one series per metric.
 - **pie** for "what's the share of X?" — pair with \`get_competitor_comparison\`'s share of voice, or citation domain mix. \`valueKey\` + \`labelKey\`.
 
 Hard rules:

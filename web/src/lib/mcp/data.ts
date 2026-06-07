@@ -1622,3 +1622,149 @@ export async function getProductVisibility(
     merchant_domains,
   };
 }
+
+// ── Prompt Performance ────────────────────────────────────────────────────────
+
+export interface PromptPerformanceParams {
+  brandId: string;
+  dateFrom?: string;
+  dateTo?: string;
+  topicId?: string;
+  sortBy?: 'visibility' | 'mentions' | 'citations' | 'appearances';
+  order?: 'desc' | 'asc';
+  limit?: number;
+  model?: string;
+  region?: string;
+}
+
+export interface PromptPerformanceOutput {
+  brand: { id: string; name: string };
+  window: { dateFrom: string | null; dateTo: string | null };
+  prompts: Array<{
+    prompt_id: string;
+    prompt_text: string;
+    topic_name: string | null;
+    result_count: number;
+    avg_visibility: number;
+    total_mentions: number;
+    total_citations: number;
+    avg_competitor_score: number;
+  }>;
+}
+
+interface PromptPerformanceRpcResult {
+  prompt_id: string;
+  prompt_text: string;
+  topic_name: string | null;
+  result_count: number;
+  sum_visibility: number;
+  total_mentions: number;
+  total_citations: number;
+  comp_sum_visibility: number;
+  comp_count: number;
+}
+
+/**
+ * Aggregates prompt-level performance over the given window.
+ * Enforces organization ownership.
+ */
+export async function getPromptPerformanceFor(
+  auth: McpAuthContext,
+  params: PromptPerformanceParams,
+): Promise<PromptPerformanceOutput | null> {
+  if (!auth.organizationId) return null;
+
+  const { data: brand } = await supabaseAdmin
+    .from('brands')
+    .select('id, name')
+    .eq('id', params.brandId)
+    .eq('organization_id', auth.organizationId)
+    .maybeSingle();
+  if (!brand) return null;
+
+  const p_models = params.model
+    ? params.model
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : null;
+
+  const { data, error } = await supabaseAdmin.rpc('prompt_performance_aggregates', {
+    p_brand_id: params.brandId,
+    p_models: p_models && p_models.length > 0 ? p_models : null,
+    p_region: params.region ?? null,
+    p_date_from: params.dateFrom ?? null,
+    p_date_to: expandDateToEndOfDay(params.dateTo) ?? null,
+    p_topic_id: params.topicId ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+
+  const raw = (data as unknown as PromptPerformanceRpcResult[]) ?? [];
+
+  let prompts = raw.map((item) => {
+    const result_count = Number(item.result_count);
+    const avg_visibility =
+      result_count > 0 ? Math.round(Number(item.sum_visibility) / result_count) : 0;
+    const avg_competitor_score =
+      Number(item.comp_count) > 0
+        ? Math.round(Number(item.comp_sum_visibility) / Number(item.comp_count))
+        : 0;
+
+    return {
+      prompt_id: item.prompt_id,
+      prompt_text: item.prompt_text,
+      topic_name: item.topic_name,
+      result_count,
+      avg_visibility,
+      total_mentions: Number(item.total_mentions),
+      total_citations: Number(item.total_citations),
+      avg_competitor_score,
+    };
+  });
+
+  // Sorting
+  const sortBy = params.sortBy ?? 'visibility';
+  const order = params.order ?? 'desc';
+  const isAsc = order === 'asc';
+
+  prompts.sort((a, b) => {
+    let valA = 0;
+    let valB = 0;
+    if (sortBy === 'visibility') {
+      valA = a.avg_visibility;
+      valB = b.avg_visibility;
+    } else if (sortBy === 'mentions') {
+      valA = a.total_mentions;
+      valB = b.total_mentions;
+    } else if (sortBy === 'citations') {
+      valA = a.total_citations;
+      valB = b.total_citations;
+    } else if (sortBy === 'appearances') {
+      valA = a.result_count;
+      valB = b.result_count;
+    }
+
+    if (valA !== valB) {
+      return isAsc ? valA - valB : valB - valA;
+    }
+    // Stable fallback sorting
+    return a.prompt_id.localeCompare(b.prompt_id);
+  });
+
+  // Limiting
+  const limit = Math.min(Math.max(params.limit ?? 10, 1), 100);
+  prompts = prompts.slice(0, limit);
+
+  return {
+    brand: {
+      id: brand.id,
+      name: brand.name,
+    },
+    window: {
+      dateFrom: params.dateFrom ?? null,
+      dateTo: params.dateTo ?? null,
+    },
+    prompts,
+  };
+}
