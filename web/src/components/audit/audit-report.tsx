@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 // Display order + labels for the five rubric categories (keys come from the
 // server's categoryScores). Mirrors the rubric category weights.
-const CATEGORY_META: { key: string; label: string; weight: number }[] = [
+export const CATEGORY_META: { key: string; label: string; weight: number }[] = [
   { key: 'structure', label: 'Structure', weight: 0.25 },
   { key: 'content', label: 'Content', weight: 0.25 },
   { key: 'authority', label: 'Authority', weight: 0.2 },

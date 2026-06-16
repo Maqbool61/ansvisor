@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Search, Loader2, Trash2, Sparkles } from 'lucide-react';
+import { Search, Loader2, Trash2, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,25 @@ import {
   runAudit,
   getAudits,
   getAuditQuota,
+  getAuditTrend,
   deleteAudit,
   type AuditSummary,
   type AuditQuota,
+  type AuditTrend,
 } from '@/lib/actions/audits';
-import { pct, scoreColor } from '@/components/audit/audit-report';
+import { pct, scoreColor, CATEGORY_META } from '@/components/audit/audit-report';
+import { ScoreTrendChart } from './_charts';
 import { cn } from '@/lib/utils';
+
+type RangePreset = '7d' | '30d' | '90d' | 'all';
+const RANGE_DAYS: Record<RangePreset, number | null> = { '7d': 7, '30d': 30, '90d': 90, all: null };
+
+function barClass(score: number | null): string {
+  if (score === null) return 'bg-muted';
+  if (score >= 0.7) return 'bg-green-600';
+  if (score >= 0.4) return 'bg-amber-500';
+  return 'bg-destructive';
+}
 
 export default function SiteAuditPage() {
   const t = useTranslations('audit');
@@ -35,20 +48,29 @@ export default function SiteAuditPage() {
   const [running, setRunning] = useState(false);
   const [history, setHistory] = useState<AuditSummary[]>([]);
   const [quota, setQuota] = useState<AuditQuota | null>(null);
+  const [trend, setTrend] = useState<AuditTrend | null>(null);
+  const [range, setRange] = useState<RangePreset>('30d');
+  // Capture "now" once (impure call belongs in a lazy initializer, not render).
+  const [nowMs] = useState(() => Date.now());
 
-  // Load recent audits + the monthly quota for the active brand.
+  // Load recent audits + the monthly quota + the primary-domain trend.
   useEffect(() => {
     if (!activeBrandId) return;
     let cancelled = false;
     (async () => {
       try {
-        const [data, q] = await Promise.all([getAudits(activeBrandId), getAuditQuota()]);
+        const [data, q, tr] = await Promise.all([
+          getAudits(activeBrandId),
+          getAuditQuota(),
+          getAuditTrend(activeBrandId),
+        ]);
         if (!cancelled) {
           setHistory(data);
           setQuota(q);
+          setTrend(tr);
         }
       } catch (err) {
-        console.error('Failed to load audit history:', err);
+        console.error('Failed to load audit hub data:', err);
       }
     })();
     return () => {
@@ -57,6 +79,29 @@ export default function SiteAuditPage() {
   }, [activeBrandId]);
 
   const quotaExhausted = quota !== null && quota.limit !== -1 && quota.remaining <= 0;
+
+  // Trend points within the selected range (oldest → newest).
+  const rangePoints = useMemo(() => {
+    const points = trend?.points ?? [];
+    const days = RANGE_DAYS[range];
+    if (days === null) return points;
+    const cutoff = nowMs - days * 24 * 60 * 60 * 1000;
+    return points.filter((p) => new Date(p.createdAt).getTime() >= cutoff);
+  }, [trend, range, nowMs]);
+
+  const chartData = rangePoints
+    .filter((p) => p.totalScore !== null)
+    .map((p) => ({
+      date: new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      score: pct(p.totalScore) ?? 0,
+    }));
+
+  const latestPoint = rangePoints[rangePoints.length - 1] ?? null;
+  const delta =
+    rangePoints.length >= 2
+      ? (pct(rangePoints[rangePoints.length - 1].totalScore) ?? 0) -
+        (pct(rangePoints[0].totalScore) ?? 0)
+      : null;
 
   const handleRun = async () => {
     if (!activeBrandId) {
@@ -96,6 +141,108 @@ export default function SiteAuditPage() {
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
+
+      {/* Primary-domain score trend + category breakdown */}
+      {trend && trend.points.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="text-base">{t('scoreOverTime')}</CardTitle>
+              {trend.primaryDomain && (
+                <p className="mt-0.5 text-xs text-muted-foreground">{trend.primaryDomain}</p>
+              )}
+            </div>
+            <div className="flex shrink-0 overflow-hidden rounded-md border">
+              {(['7d', '30d', '90d', 'all'] as RangePreset[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setRange(p)}
+                  className={cn(
+                    'px-2.5 py-1 text-xs font-medium transition-colors',
+                    range === p
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card text-foreground hover:bg-muted',
+                  )}
+                >
+                  {p === 'all' ? 'All' : p}
+                </button>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Chart + delta */}
+            <div className="lg:col-span-2">
+              <div className="mb-2 flex items-baseline gap-2">
+                <span
+                  className={cn(
+                    'text-3xl font-bold tabular-nums',
+                    scoreColor(latestPoint?.totalScore ?? null),
+                  )}
+                >
+                  {latestPoint ? (pct(latestPoint.totalScore) ?? '—') : '—'}
+                </span>
+                <span className="text-sm text-muted-foreground">/100</span>
+                {delta !== null && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-0.5 text-xs font-medium',
+                      delta > 0
+                        ? 'text-green-600'
+                        : delta < 0
+                          ? 'text-destructive'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {delta > 0 ? (
+                      <TrendingUp className="h-3.5 w-3.5" />
+                    ) : delta < 0 ? (
+                      <TrendingDown className="h-3.5 w-3.5" />
+                    ) : null}
+                    {delta > 0 ? '+' : ''}
+                    {delta} {t('inRange')}
+                  </span>
+                )}
+              </div>
+              {chartData.length >= 2 ? (
+                <ScoreTrendChart data={chartData} score={latestPoint?.totalScore ?? null} />
+              ) : (
+                <div className="flex h-[200px] items-center justify-center text-center text-sm text-muted-foreground">
+                  {t('trendNeedsMore')}
+                </div>
+              )}
+            </div>
+
+            {/* Category breakdown grid (latest audit in range) */}
+            <div className="space-y-3">
+              <div className="text-xs font-medium text-muted-foreground">
+                {t('categoryBreakdown')}
+              </div>
+              {CATEGORY_META.map((cat) => {
+                const cs = latestPoint?.categoryScores?.[cat.key];
+                const score = cs?.score ?? null;
+                const p = pct(score);
+                return (
+                  <div key={cat.key}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium">{cat.label}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {p === null ? 'n/a' : `${p}/100`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn('h-full rounded-full', barClass(score))}
+                        style={{ width: `${p ?? 0}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Run bar */}
       <Card>

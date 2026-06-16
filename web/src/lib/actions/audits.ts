@@ -58,6 +58,18 @@ export interface AuditQuota {
   remaining: number;
 }
 
+export interface AuditTrendPoint {
+  id: string;
+  createdAt: string;
+  totalScore: number | null;
+  categoryScores: Record<string, CategoryScore>;
+}
+
+export interface AuditTrend {
+  primaryDomain: string | null;
+  points: AuditTrendPoint[];
+}
+
 export interface AuditSummary {
   id: string;
   url: string;
@@ -146,6 +158,26 @@ export async function getAuditQuota(): Promise<AuditQuota> {
 
   const data = await res.json();
   return data.quota;
+}
+
+/** Score + category-score time series for the brand's primary domain. */
+export async function getAuditTrend(brandId: string): Promise<AuditTrend> {
+  const session = await getSession();
+
+  const res = await fetch(
+    `${AEO_SERVER_URL}/api/audits/trend?brandId=${encodeURIComponent(brandId)}`,
+    {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `Server error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return { primaryDomain: data.primaryDomain ?? null, points: data.points ?? [] };
 }
 
 /** List recent audits for a brand (summaries, no signal detail). */

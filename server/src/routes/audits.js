@@ -211,6 +211,73 @@ router.get('/quota', async (req, res) => {
   }
 });
 
+/** Lowercased host of a URL with a leading www. stripped (null on failure). */
+function normHost(u) {
+  try {
+    return new URL(u).host.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/audits/trend?brandId=… — completed audits of the brand's PRIMARY
+// domain over time (score + category scores), for the hub trend chart.
+// Registered before /:id so "trend" isn't matched as an audit id.
+router.get('/trend', async (req, res) => {
+  const userId = req.user?.id;
+  const { brandId } = req.query;
+  if (!brandId) {
+    return res.status(400).json({ success: false, message: 'brandId is required' });
+  }
+
+  try {
+    await assertBrandAccess(brandId, userId);
+
+    const { data: domainRows } = await supabaseAdmin
+      .from('brand_domains')
+      .select('domain, is_primary')
+      .eq('brand_id', brandId);
+    const primary =
+      (domainRows ?? []).find((d) => d.is_primary)?.domain ?? (domainRows ?? [])[0]?.domain ?? null;
+    const primaryHost = primary
+      ? primary
+          .replace(/^https?:\/\//, '')
+          .replace(/^www\./i, '')
+          .toLowerCase()
+      : null;
+
+    const { data: rows } = await supabaseAdmin
+      .from('site_audits')
+      .select('id, url, final_url, total_score, category_scores, created_at')
+      .eq('brand_id', brandId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: true })
+      .limit(500);
+
+    // Keep only audits of the primary domain (match on host of url / final_url).
+    const points = (rows ?? [])
+      .filter((r) => {
+        if (!primaryHost) return false;
+        const h = normHost(r.final_url) ?? normHost(r.url);
+        return h === primaryHost;
+      })
+      .map((r) => ({
+        id: r.id,
+        createdAt: r.created_at,
+        totalScore: r.total_score === null ? null : Number(r.total_score),
+        categoryScores: r.category_scores ?? {},
+      }));
+
+    return res.json({ success: true, primaryDomain: primary, points });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ success: false, message: err.message });
+    }
+    console.error('[audit] trend failed:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // GET /api/audits/:id — fetch one stored audit with its signals
 router.get('/:id', async (req, res) => {
   const userId = req.user?.id;
