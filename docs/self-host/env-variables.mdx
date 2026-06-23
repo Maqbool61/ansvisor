@@ -44,12 +44,14 @@ Fed to the Express API + workers.
 | `TOPIC_SUGGESTION_MODEL` | optional | LLM for topic suggestions |
 | `PROMPT_SUGGESTION_MODEL` | optional | LLM for prompt suggestions |
 | `COMPETITOR_SUGGESTION_MODEL` | optional | LLM for competitor suggestions |
+| `AUDIT_LLM_MODEL` | optional | LLM for the Site Audit's LLM-judged signals + AI recommendations (default: `google/gemini-3-flash-preview`) |
 | `ALLOWED_ORIGINS` | ✅ | Comma-separated list of web origins allowed to call the API (for CORS) |
 | `IS_CLOUD` | optional | `"true"` only for the official cloud build |
 | `DATAFORSEO_LOGIN` | optional | DataForSEO login (for prompt volume analysis) |
 | `DATAFORSEO_PASSWORD` | optional | DataForSEO password |
 | `CLORO_API_KEY` | optional | Cloro web scraper API key (for ChatGPT/Gemini/Perplexity web scraping) |
 | `PLATFORM_PROVIDER` | optional | Default `cloro`. Used to pick scraper backend |
+| `SCRAPEDO_API_KEY` | Site Audit | Scrape.do API key — required to run **Site Audit** (it fetches target pages via Scrape.do's proxy + JS render). Distinct from `CLORO_API_KEY`, which scrapes the AI answer engines. |
 | `AI_VOLUME_MULTIPLIER` | optional | Estimated AI search adoption rate (default `0.15` = 15% of Google volume) |
 | `CRON_SECRET` | cloud only | Shared secret with web's CRON_SECRET; protects internal cron endpoints |
 
