@@ -3,7 +3,8 @@
   "name": "Ansvisor",
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "https://www.ansvisor.com"
   },
   "favicon": "/favicon.svg",
   "metadata": {
