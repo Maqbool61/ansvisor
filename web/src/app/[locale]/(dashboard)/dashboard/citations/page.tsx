@@ -1316,12 +1316,12 @@ export default function CitationsPage() {
   const brand = getActiveBrand();
 
   const [filters, setFilters] = useState<UIFilters>(DEFAULT_FILTERS);
+  const [data, setData] = useState<CitationsOverview | null>(null);
+
   // Pagination — resets to page 0 whenever any filter changes
   const filterKey = JSON.stringify(filters);
   const domainPager = usePagination(data?.rows?.length ?? 0, filterKey);
   const urlPager = usePagination(data?.urlRows?.length ?? 0, filterKey);
-
-  const [data, setData] = useState<CitationsOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [prompts, setPrompts] = useState<PromptOption[]>([]);
