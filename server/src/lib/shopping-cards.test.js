@@ -123,6 +123,14 @@ describe('shopping-cards – parsePerplexityCard', () => {
     expect(result.product_title).toBe('Gadget');
     expect(result.product_brand).toBe('Acme Inc');
   });
+
+  it('should round prices with float-precision garbage to exactly two decimals', () => {
+    const card1 = { price: 2999.989990234375 };
+    const card2 = { price: { amount: 2999.989990234375 } };
+
+    expect(parsePerplexityCard(card1, 0).price_amount).toBe(2999.99);
+    expect(parsePerplexityCard(card2, 0).price_amount).toBe(2999.99);
+  });
 });
 
 describe('shopping-cards – parseAiModeCard', () => {

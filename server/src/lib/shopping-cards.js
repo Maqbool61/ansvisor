@@ -87,14 +87,14 @@ function parsePrice(value) {
       currency = CURRENCY_SYMBOLS[value.currencySymbol.trim()] ?? null;
     }
     return {
-      amount: Number.isFinite(amount) ? amount : null,
+      amount: Number.isFinite(amount) ? Math.round(amount * 100) / 100 : null,
       currency: currency && CURRENCY_CODES.has(currency) ? currency : currency || null,
     };
   }
 
   // Numeric form (rare, but tolerate)
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return { amount: value, currency: null };
+    return { amount: Math.round(value * 100) / 100, currency: null };
   }
 
   // String form — the common case. Examples we see in the wild:
@@ -148,7 +148,7 @@ function parsePrice(value) {
         }
       }
       const parsed = Number.parseFloat(s);
-      amount = Number.isFinite(parsed) ? parsed : null;
+      amount = Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null;
     }
 
     return {

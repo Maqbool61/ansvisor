@@ -696,9 +696,13 @@ export interface CardEligiblePromptsResponse {
 
 function formatPrice(amount: number | null, currency: string | null): string {
   if (amount == null) return '—';
+  const formattedAmount = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
   const symbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency || '';
   const isSymbolWord = symbol.length > 1;
-  return isSymbolWord ? `${amount} ${symbol}` : `${symbol}${amount}`;
+  return isSymbolWord ? `${formattedAmount} ${symbol}` : `${symbol}${formattedAmount}`;
 }
 
 export async function getCardEligiblePrompts(

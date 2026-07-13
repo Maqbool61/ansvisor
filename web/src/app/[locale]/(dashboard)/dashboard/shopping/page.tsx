@@ -313,7 +313,8 @@ export default function ShoppingPage() {
                           impressions: p.impressions,
                           platforms: p.platforms.join('; '),
                           regions: p.regions.join('; '),
-                          last_price: p.last_price !== null ? p.last_price : '',
+                          last_price:
+                            p.last_price !== null ? Math.round(p.last_price * 100) / 100 : '',
                           price_currency: p.price_currency || '',
                           top_merchant: p.top_merchant || '',
                           last_seen: p.last_seen,
@@ -379,7 +380,8 @@ export default function ShoppingPage() {
                           impressions: p.impressions,
                           platforms: p.platforms.join('; '),
                           regions: p.regions.join('; '),
-                          last_price: p.last_price !== null ? p.last_price : '',
+                          last_price:
+                            p.last_price !== null ? Math.round(p.last_price * 100) / 100 : '',
                           price_currency: p.price_currency || '',
                           top_merchant: p.top_merchant || '',
                           last_seen: p.last_seen,
@@ -1142,8 +1144,15 @@ function ProductTable({
         </TableHeader>
         <TableBody>
           {sortedProducts.map((p, idx) => {
+            const formattedPrice =
+              p.last_price !== null
+                ? new Intl.NumberFormat(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(p.last_price)
+                : '';
             const lastPriceStr =
-              p.last_price !== null ? `${p.last_price} ${p.price_currency || ''}` : '—';
+              p.last_price !== null ? `${formattedPrice} ${p.price_currency || ''}` : '—';
             const formattedDate = p.last_seen
               ? new Date(p.last_seen).toLocaleDateString(undefined, {
                   month: 'short',
