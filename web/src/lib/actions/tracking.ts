@@ -146,6 +146,8 @@ interface CompetitorAggregatesRow {
   brand_sum_visibility: number;
   brand_total_mentions: number;
   brand_total_citations: number;
+  brand_prompt_count: number;
+  brand_visible_prompts: number;
   by_competitor: Array<{
     competitor_id: string;
     name: string | null;
@@ -153,12 +155,15 @@ interface CompetitorAggregatesRow {
     row_count: number;
     total_mentions: number;
     total_citations: number;
+    visible_prompts: number;
   }>;
   by_brand_provider: Array<{
     model_used: string | null;
     platform: string | null;
     sum_visibility: number;
     row_count: number;
+    prompt_count: number;
+    visible_prompts: number;
   }>;
   by_competitor_provider: Array<{
     model_used: string | null;
@@ -167,6 +172,7 @@ interface CompetitorAggregatesRow {
     competitor_name: string | null;
     sum_visibility: number;
     row_count: number;
+    visible_prompts: number;
   }>;
 }
 
@@ -333,6 +339,54 @@ export interface TrackedPromptsKpi {
   quotaLimit: number;
 }
 
+export interface VisibilityRateKpi {
+  /** Distinct prompts with >= 1 answer mentioning or citing the brand. */
+  visiblePrompts: number;
+  /** Result rows where the brand appeared. */
+  visibleResults: number;
+  /** Average visibility score over only the rows the brand appeared in. */
+  avgScoreWhenVisible: number;
+}
+
+/**
+ * Visibility Rate KPI — the "appeared" side of the how-often ⁄ how-good
+ * split. Averaging visibility over ALL results reads near zero for most
+ * brands (absent answers contribute 0 each), so the headline shows how many
+ * tracked prompts the brand actually surfaced in, and the average score of
+ * only those appearances. Same filters and shopping exclusion as the rest of
+ * the KPI row; the rate's denominator is TrackedPromptsKpi.activeInPeriod.
+ */
+export async function getVisibilityRateKpi(
+  brandId: string,
+  opts?: { model?: string; region?: string; dateFrom?: string; dateTo?: string; topicId?: string },
+): Promise<VisibilityRateKpi> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc('visible_prompt_stats', {
+    p_brand_id: brandId,
+    p_platform: null,
+    p_models: modelFilterArray(opts?.model),
+    p_region: opts?.region ?? null,
+    p_date_from: opts?.dateFrom ?? null,
+    p_date_to: expandDateToEndOfDay(opts?.dateTo) ?? null,
+    p_topic_id: opts?.topicId ?? null,
+  });
+  if (error) throw new Error(error.message);
+
+  const row = (data ?? {}) as {
+    visible_prompts?: number;
+    visible_results?: number;
+    sum_visibility_visible?: number;
+  };
+  const visibleResults = Number(row.visible_results ?? 0);
+  return {
+    visiblePrompts: Number(row.visible_prompts ?? 0),
+    visibleResults,
+    avgScoreWhenVisible:
+      visibleResults > 0 ? Math.round(Number(row.sum_visibility_visible ?? 0) / visibleResults) : 0,
+  };
+}
+
 /**
  * Tracked Prompts KPI (#457). The main value is period-aware — distinct
  * prompts that produced results under the SAME filters as the other KPI
@@ -489,6 +543,7 @@ export interface InsightsData {
   competitors: CompetitorComparisonData;
   sov: ShareOfVoiceData;
   trackedPrompts: TrackedPromptsKpi;
+  visibilityRate: VisibilityRateKpi;
   filterOptions: InsightsFilterOptions;
   recommendations: InsightsRecommendations;
   hasAnyData: boolean;
@@ -530,6 +585,7 @@ export async function getInsightsData(
     competitors,
     sov,
     trackedPrompts,
+    visibilityRate,
     filterOptions,
     recommendations,
     unfilteredTotal,
@@ -538,6 +594,7 @@ export async function getInsightsData(
     getCompetitorComparison(brandId, filterOpts),
     getShareOfVoiceData(brandId, filterOpts),
     getTrackedPromptsKpi(brandId, filterOpts),
+    getVisibilityRateKpi(brandId, filterOpts),
     getInsightsFilterOptions(brandId),
     getInsightsRecommendations(brandId),
     opts.checkUnfiltered ? getBrandResultsTotal(brandId) : Promise.resolve(null),
@@ -552,6 +609,7 @@ export async function getInsightsData(
     competitors,
     sov,
     trackedPrompts,
+    visibilityRate,
     filterOptions,
     recommendations,
     hasAnyData,
@@ -1165,8 +1223,18 @@ export interface CompetitorComparisonEntry {
   name: string;
   avgVisibilityScore: number;
   /**
-   * Percentage change of the average visibility score versus the previous
-   * comparable window (e.g. last 7 days vs the 7 days before that).
+   * Prompt-level visibility rate (%): distinct prompts this entity appeared
+   * in ÷ distinct prompts that produced results in the window. Same
+   * denominator for the brand and every competitor — the leaderboard metric.
+   */
+  visibilityRate: number;
+  /** Distinct prompts this entity appeared in (the rate's numerator). */
+  visiblePrompts: number;
+  /** Distinct prompts that produced results in the window (shared denominator). */
+  promptCount: number;
+  /**
+   * Point change of the visibility rate versus the previous comparable
+   * window (e.g. last 7 days vs the 7 days before that).
    * `null` when there is no comparable previous-period value.
    */
   change: number | null;
@@ -1304,43 +1372,44 @@ export async function getCompetitorComparison(
   const curWin = curRes.data as unknown as CompetitorAggregatesRow | null;
   const prevWin = prevRes.data as unknown as CompetitorAggregatesRow | null;
 
-  const curBrandAvg =
-    curWin && curWin.brand_row_count > 0
-      ? curWin.brand_sum_visibility / curWin.brand_row_count
-      : null;
-  const prevBrandAvg =
-    prevWin && prevWin.brand_row_count > 0
-      ? prevWin.brand_sum_visibility / prevWin.brand_row_count
-      : null;
+  // The leaderboard metric is the prompt-level visibility rate: distinct
+  // prompts an entity appeared in ÷ distinct prompts that produced results.
+  // Same-denominator rule as before (#478) — the brand and every competitor
+  // divide by the same prompt count, so absence still costs; but a prompt
+  // counts once no matter how many platforms answered it, which keeps the
+  // number readable instead of the near-zero all-rows score average.
+  const rateOf = (visible: number, prompts: number): number | null =>
+    prompts > 0 ? Math.round((visible / prompts) * 1000) / 10 : null;
 
-  // Competitor averages use the SAME denominator as the brand's — every
-  // filtered result row, not just the rows where the competitor happened to
-  // appear. A competitor absent from a response scores 0 for it, exactly
-  // like the brand does. Dividing by the appearance count instead graded
-  // competitors only on their best runs and could rank a rarely-seen
-  // competitor above a frequently-mentioned brand.
-  const curCompAvg = new Map<string, number>();
-  if (curWin && curWin.brand_row_count > 0) {
+  const curBrandRate = curWin
+    ? rateOf(curWin.brand_visible_prompts, curWin.brand_prompt_count)
+    : null;
+  const prevBrandRate = prevWin
+    ? rateOf(prevWin.brand_visible_prompts, prevWin.brand_prompt_count)
+    : null;
+
+  const curCompRate = new Map<string, number | null>();
+  if (curWin) {
     for (const c of curWin.by_competitor) {
-      curCompAvg.set(c.competitor_id, c.sum_visibility / curWin.brand_row_count);
+      curCompRate.set(c.competitor_id, rateOf(c.visible_prompts, curWin.brand_prompt_count));
     }
   }
-  const prevCompAvg = new Map<string, number>();
-  if (prevWin && prevWin.brand_row_count > 0) {
+  const prevCompRate = new Map<string, number | null>();
+  if (prevWin) {
     for (const c of prevWin.by_competitor) {
-      prevCompAvg.set(c.competitor_id, c.sum_visibility / prevWin.brand_row_count);
+      prevCompRate.set(c.competitor_id, rateOf(c.visible_prompts, prevWin.brand_prompt_count));
     }
   }
 
   const brandName = (brand?.name as string) ?? 'Your Brand';
   const brandAvg = Math.round(agg.brand_sum_visibility / agg.brand_row_count);
+  const brandRate = rateOf(agg.brand_visible_prompts, agg.brand_prompt_count) ?? 0;
 
-  // Percentage change relative to the previous-period value.
-  // Null when no comparable previous value exists (or growth from 0 → x is undefined).
-  const pctChange = (cur: number | null, prev: number | null): number | null => {
+  // Point change of the rate relative to the previous-period value.
+  // Null when no comparable previous value exists.
+  const rateDiff = (cur: number | null, prev: number | null): number | null => {
     if (cur === null || prev === null) return null;
-    if (prev === 0) return cur === 0 ? 0 : null;
-    return Math.round(((cur - prev) / prev) * 1000) / 10;
+    return Math.round((cur - prev) * 10) / 10;
   };
 
   // Falls back to the competitor id when the name is null/empty so two
@@ -1354,7 +1423,10 @@ export async function getCompetitorComparison(
     {
       name: brandName,
       avgVisibilityScore: brandAvg,
-      change: pctChange(curBrandAvg, prevBrandAvg),
+      visibilityRate: brandRate,
+      visiblePrompts: agg.brand_visible_prompts,
+      promptCount: agg.brand_prompt_count,
+      change: rateDiff(curBrandRate, prevBrandRate),
       totalMentions: agg.brand_total_mentions,
       totalCitations: agg.brand_total_citations,
       resultCount: agg.brand_row_count,
@@ -1363,15 +1435,18 @@ export async function getCompetitorComparison(
   ];
 
   for (const c of agg.by_competitor) {
-    // Same-denominator rule as the window averages above (agg.brand_row_count
+    // Same-denominator rule as the window rates above (agg.brand_row_count
     // is guaranteed > 0 by the early return).
     const avg = Math.round(c.sum_visibility / agg.brand_row_count);
     entries.push({
       name: competitorDisplayName(c.name, c.competitor_id),
       avgVisibilityScore: avg,
-      change: pctChange(
-        curCompAvg.get(c.competitor_id) ?? null,
-        prevCompAvg.get(c.competitor_id) ?? null,
+      visibilityRate: rateOf(c.visible_prompts, agg.brand_prompt_count) ?? 0,
+      visiblePrompts: c.visible_prompts,
+      promptCount: agg.brand_prompt_count,
+      change: rateDiff(
+        curCompRate.get(c.competitor_id) ?? null,
+        prevCompRate.get(c.competitor_id) ?? null,
       ),
       totalMentions: c.total_mentions,
       totalCitations: c.total_citations,
@@ -1380,35 +1455,36 @@ export async function getCompetitorComparison(
     });
   }
 
-  entries.sort((a, b) => b.avgVisibilityScore - a.avgVisibilityScore);
+  entries.sort((a, b) => b.visibilityRate - a.visibilityRate || b.totalMentions - a.totalMentions);
 
   // --- Per-provider breakdown ---
   // resolveProvider stays in JS so we don't keep a SQL copy of the mapping
   // table in sync — fold the (model_used, platform) groups into provider
-  // buckets here.
-  type Agg = { totalScore: number; count: number };
+  // buckets here. The chart plots the same prompt-level rate as the
+  // leaderboard; summing DISTINCT counts across two engines of one provider
+  // counts a shared prompt once per engine in numerator and denominator
+  // alike, so the folded rate stays unbiased.
+  type Agg = { visiblePrompts: number; promptCount: number };
   const brandByProvider = new Map<string, Agg>();
   for (const bp of agg.by_brand_provider) {
     const provider = resolveProvider(bp.model_used, bp.platform);
-    const ex = brandByProvider.get(provider) ?? { totalScore: 0, count: 0 };
-    ex.totalScore += Number(bp.sum_visibility);
-    ex.count += bp.row_count;
+    const ex = brandByProvider.get(provider) ?? { visiblePrompts: 0, promptCount: 0 };
+    ex.visiblePrompts += bp.visible_prompts;
+    ex.promptCount += bp.prompt_count;
     brandByProvider.set(provider, ex);
   }
 
-  // compName -> provider -> agg. Keyed by the same display name used in
-  // entries[] above so the providerRows column headers line up with the
-  // table rows (empty/null names fall back to competitor_id).
-  const compByProvider = new Map<string, Map<string, Agg>>();
+  // compName -> provider -> visible prompt count. Keyed by the same display
+  // name used in entries[] above so the providerRows column headers line up
+  // with the table rows (empty/null names fall back to competitor_id). No
+  // denominator here — competitors divide by the brand's provider bucket.
+  const compByProvider = new Map<string, Map<string, number>>();
   for (const cp of agg.by_competitor_provider) {
     const provider = resolveProvider(cp.model_used, cp.platform);
     const name = competitorDisplayName(cp.competitor_name, cp.competitor_id);
     if (!compByProvider.has(name)) compByProvider.set(name, new Map());
     const pm = compByProvider.get(name)!;
-    const ex = pm.get(provider) ?? { totalScore: 0, count: 0 };
-    ex.totalScore += Number(cp.sum_visibility);
-    ex.count += cp.row_count;
-    pm.set(provider, ex);
+    pm.set(provider, (pm.get(provider) ?? 0) + cp.visible_prompts);
   }
 
   const allProviders = new Set<string>();
@@ -1420,15 +1496,15 @@ export async function getCompetitorComparison(
   const providerRows: ProviderComparisonRow[] = [...allProviders].sort().map((provider) => {
     const row: ProviderComparisonRow = { provider };
     const bp = brandByProvider.get(provider);
-    row[brandName] = bp && bp.count > 0 ? Math.round(bp.totalScore / bp.count) : 0;
+    // Same-denominator rule: everyone divides by the brand bucket's prompt
+    // count (which spans every filtered prompt for the provider), not their
+    // own appearance count. Competitor rows are a subset of the brand's, so
+    // bp always exists when a competitor has data for the provider.
+    const denom = bp?.promptCount ?? 0;
+    row[brandName] = bp && denom > 0 ? Math.round((bp.visiblePrompts / denom) * 1000) / 10 : 0;
     for (const [compName, pm] of compByProvider) {
-      const cp = pm.get(provider);
-      // Same-denominator rule: divide by the provider bucket's total run
-      // count (the brand's, which spans every filtered row), not the
-      // competitor's appearance count. Competitor rows are a subset of the
-      // brand's, so bp always exists when cp does.
-      const denom = bp?.count ?? 0;
-      row[compName] = cp && denom > 0 ? Math.round(cp.totalScore / denom) : 0;
+      const visible = pm.get(provider) ?? 0;
+      row[compName] = denom > 0 ? Math.round((visible / denom) * 1000) / 10 : 0;
     }
     return row;
   });

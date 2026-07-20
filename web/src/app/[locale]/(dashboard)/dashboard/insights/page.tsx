@@ -46,6 +46,7 @@ import {
   exportPromptResults,
   type InsightsSummary,
   type TrackedPromptsKpi,
+  type VisibilityRateKpi,
   type CompetitorComparisonData,
   type ShareOfVoiceData,
   type InsightsRecommendations,
@@ -63,6 +64,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   BarChart3,
   CalendarX2,
+  Eye,
   HelpCircle,
   Play,
   TrendingUp,
@@ -596,8 +598,8 @@ function InsightsSkeleton() {
         </div>
         <Skeleton className="h-10 w-32" />
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="pt-6 space-y-2">
               <Skeleton className="h-4 w-24" />
@@ -891,6 +893,7 @@ export default function InsightsPage() {
   const brand = useBrandStore((s) => s.getActiveBrand());
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [trackedPrompts, setTrackedPrompts] = useState<TrackedPromptsKpi | null>(null);
+  const [visibilityRate, setVisibilityRate] = useState<VisibilityRateKpi | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -939,6 +942,7 @@ export default function InsightsPage() {
         });
         setSummary(insights.summary);
         setTrackedPrompts(insights.trackedPrompts);
+        setVisibilityRate(insights.visibilityRate);
         setCompetitorData(insights.competitors.brands.length > 1 ? insights.competitors : null);
         setSovData(insights.sov.byPlatform.length > 0 ? insights.sov : null);
         setRecommendations(insights.recommendations);
@@ -1209,6 +1213,14 @@ export default function InsightsPage() {
   if (!brand || (isLoading && !summary)) return <InsightsSkeleton />;
 
   const noResults = !summary || summary.totalResults === 0;
+
+  // Visibility Rate = prompts the brand appeared in ÷ prompts that produced
+  // results, both under the same filters (the Tracked Prompts KPI is the
+  // denominator on purpose — the two cards must agree).
+  const visibilityRatePct =
+    visibilityRate && trackedPrompts && trackedPrompts.activeInPeriod > 0
+      ? Math.round((visibilityRate.visiblePrompts / trackedPrompts.activeInPeriod) * 1000) / 10
+      : 0;
   const trulyEmpty = noResults && !hasAnyData;
 
   if (trulyEmpty) {
@@ -1313,19 +1325,18 @@ export default function InsightsPage() {
         <NoDataForPeriod datePreset={filters.datePreset} onReset={handleResetFilters} />
       ) : (
         <>
-          {/* KPI Cards */}
+          {/* KPI Cards — Visibility Rate leads the row: the raw all-results
+              score average reads near zero for most brands (absent answers
+              each contribute 0) and buried the number users act on. The old
+              average survives in the breakdown sheet; Share of Voice has its
+              own chart section below. */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
             <KpiCard
-              title="Visibility Score"
-              tooltip="A composite score (0–100) reflecting how prominently your brand appears across AI engine responses. Combines mentions, citations, and sentiment."
-              icon={BarChart3}
-              value={summary!.avgVisibilityScore}
-              sub={<DeltaBadge delta={summary!.visibilityChange} suffix=" pts" />}
-              subVariant={
-                summary!.visibilityChange !== null && summary!.visibilityChange > 0
-                  ? 'positive'
-                  : 'muted'
-              }
+              title="Visibility Rate"
+              tooltip="Share of tracked prompts where your brand appeared in at least one AI answer under the current filters."
+              icon={Eye}
+              value={`${visibilityRatePct}%`}
+              sub={null}
               onClick={() => setBreakdownMetric('visibility')}
             />
             <KpiCard
