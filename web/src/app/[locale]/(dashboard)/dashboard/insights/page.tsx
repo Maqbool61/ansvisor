@@ -860,6 +860,35 @@ function TrackingProgressBanner({
   );
 }
 
+// ─── No Competitors Teaser ────────────────────────────────────────────────────
+
+/**
+ * Shown in place of the Competitor Comparison section when the brand has no
+ * tracked competitors yet (#507). Gives users a clear path to
+ * /dashboard/competitors so the head-to-head feature is discoverable even
+ * before any competitors are added.
+ */
+function NoCompetitorsTeaser() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted-foreground/30 p-8 text-center">
+      <Users className="h-8 w-8 text-muted-foreground/40" />
+      <div>
+        <p className="text-sm font-medium text-foreground">No competitors tracked yet</p>
+        <p className="mt-0.5 max-w-xs text-xs text-muted-foreground">
+          Add competitors to see how you compare in AI answers.
+        </p>
+      </div>
+      <Link
+        href="/dashboard/competitors"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary underline-offset-2 hover:underline"
+      >
+        Head-to-Head Comparison
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function InsightsPage() {
@@ -1406,7 +1435,7 @@ export default function InsightsPage() {
               </div>
 
               {/* Competitor Comparison */}
-              {competitorData && (
+              {competitorData ? (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
                   <Card className="lg:col-span-3">
                     <CardHeader className="pb-2">
@@ -1441,6 +1470,8 @@ export default function InsightsPage() {
                     </CardContent>
                   </Card>
                 </div>
+              ) : (
+                <NoCompetitorsTeaser />
               )}
 
               {/* Share of Voice */}
