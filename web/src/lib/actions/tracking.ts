@@ -23,6 +23,7 @@ import { getOrgPlan } from '@/lib/guards/plan-guard';
 import { getPromptVolumes } from '@/lib/actions/volumes';
 import { getPromptSuggestions } from '@/lib/actions/prompt-suggestions';
 import { aggregatePromptVolumeClusters } from '@/lib/prompt-volume-clusters';
+import { percentageChange } from '@/lib/metrics';
 
 /** Round to one decimal place (keeps sub-1 averages visible instead of flooring to 0). */
 function roundTo1(n: number): number {
@@ -135,8 +136,14 @@ export interface InsightsSummary {
     resultCount: number;
   }[];
   visibilityChange: number | null;
+  /** Percentage change vs the previous period; null when the previous count is zero or unavailable. */
   mentionsChange: number | null;
+  /** Percentage change vs the previous period; null when the previous count is zero or unavailable. */
   citationsChange: number | null;
+  /** Raw previous-period count, used to distinguish a zero base from unavailable comparison data. */
+  prevMentions: number | null;
+  /** Raw previous-period count, used to distinguish a zero base from unavailable comparison data. */
+  prevCitations: number | null;
   sentimentChange: number | null;
 }
 
@@ -1056,6 +1063,8 @@ export async function getInsightsSummary(
       visibilityChange: null,
       mentionsChange: null,
       citationsChange: null,
+      prevMentions: null,
+      prevCitations: null,
       sentimentChange: null,
     };
   }
@@ -1082,6 +1091,8 @@ export async function getInsightsSummary(
   let visibilityChange: number | null = null;
   let mentionsChange: number | null = null;
   let citationsChange: number | null = null;
+  let prevMentions: number | null = null;
+  let prevCitations: number | null = null;
   let sentimentChange: number | null = null;
 
   {
@@ -1131,19 +1142,13 @@ export async function getInsightsSummary(
       const curSentimentPct = Math.round((curWin.positive_count / curWin.total_results) * 100);
 
       const prevAvgVis = roundTo1(prevWin.sum_visibility / prevWin.total_results);
-      const prevMentions = prevWin.total_mentions;
-      const prevCitations = prevWin.total_citations;
+      prevMentions = prevWin.total_mentions;
+      prevCitations = prevWin.total_citations;
       const prevSentimentPct = Math.round((prevWin.positive_count / prevWin.total_results) * 100);
 
       visibilityChange = roundTo1(curAvgVis - prevAvgVis);
-      mentionsChange =
-        curMentions > 0 && prevMentions > 0
-          ? Math.round(((curMentions - prevMentions) / prevMentions) * 100)
-          : curMentions - prevMentions;
-      citationsChange =
-        curCitations > 0 && prevCitations > 0
-          ? Math.round(((curCitations - prevCitations) / prevCitations) * 100)
-          : curCitations - prevCitations;
+      mentionsChange = percentageChange(curMentions, prevMentions);
+      citationsChange = percentageChange(curCitations, prevCitations);
       sentimentChange = curSentimentPct - prevSentimentPct;
     }
   }
@@ -1159,6 +1164,8 @@ export async function getInsightsSummary(
     visibilityChange,
     mentionsChange,
     citationsChange,
+    prevMentions,
+    prevCitations,
     sentimentChange,
   };
 }
