@@ -77,7 +77,7 @@
     },
     "comingSoon": {
       "title": "Coming soon",
-      "description": "This part of the Action Center is on its way. KPIs are live — start by setting your goals there."
+      "description": "This part of the Action Center is on its way. KPIs, Actions and Signals are live in the meantime."
     },
     "categories": {
       "visibility": "Visibility",
@@ -263,7 +263,7 @@
       },
       "sources": {
         "ai_results": "AI Results",
-        "ga4": "Google Analytics 4",
+        "ga4": "Google Analytics",
         "gsc": "Google Search Console",
         "site_audit": "Site Audit"
       },
@@ -377,7 +377,7 @@
         "top": "Top Actions",
         "topSub": "Highest priority right now",
         "atRisk": "At Risk",
-        "atRiskSub": "Visibility or traffic declining",
+        "atRiskSub": "Recover and Fix — visibility or traffic declining",
         "opportunities": "Opportunities",
         "opportunitiesSub": "High potential to grow",
         "inProgress": "In Progress",
