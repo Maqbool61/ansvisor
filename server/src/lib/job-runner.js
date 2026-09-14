@@ -16,6 +16,8 @@ import {
 import { processTrackingJob } from '../workers/tracking-worker.js';
 import { processContentJob } from '../workers/content-worker.js';
 import { generatePulseForBrand } from './pulse/engine.js';
+import { recordSignalsForBrand } from './signals/record.js';
+import { generateActionsForBrand } from './action-center/generate.js';
 import logger from './logger.js';
 
 // Concurrency counters (the default of 2 per queue is inherited from the Bull
@@ -94,6 +96,16 @@ export async function runTrackingJob(jobId, io) {
         generatePulseForBrand(brandId).catch((err) => {
           logger.error({ err, brandId }, 'daily pulse trigger failed');
         });
+        // Signal recording (Action Center) rides the same trigger but is
+        // deliberately NOT inside the pulse engine: signals are a product
+        // surface, so a brand with pulse emails off still gets them. Action
+        // generation chains after it — it consolidates the signals the
+        // recording just wrote, so running concurrently would read stale.
+        recordSignalsForBrand(brandId)
+          .then(() => generateActionsForBrand(brandId))
+          .catch((err) => {
+            logger.error({ err, brandId }, '[signals] recording or action generation failed');
+          });
       } else {
         logger.warn(
           { brandId, resultCount: result?.resultCount },

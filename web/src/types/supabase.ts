@@ -10,10 +10,162 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      action_events: {
+        Row: {
+          action_id: string
+          actor_id: string | null
+          created_at: string
+          data: Json
+          event: string
+          id: string
+        }
+        Insert: {
+          action_id: string
+          actor_id?: string | null
+          created_at?: string
+          data?: Json
+          event: string
+          id?: string
+        }
+        Update: {
+          action_id?: string
+          actor_id?: string | null
+          created_at?: string
+          data?: Json
+          event?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_events_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_tasks: {
+        Row: {
+          action_id: string
+          created_at: string
+          id: string
+          position: number
+          status: string
+          task_key: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          id?: string
+          position: number
+          status?: string
+          task_key: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          status?: string
+          task_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_tasks_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      actions: {
+        Row: {
+          action_no: number
+          assignee_id: string | null
+          baseline: Json
+          brand_id: string
+          category: string
+          completed_at: string | null
+          created_at: string
+          dedup_key: string
+          due_date: string | null
+          id: string
+          impact: string
+          kind: string
+          kpi_keys: string[]
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_no?: never
+          assignee_id?: string | null
+          baseline?: Json
+          brand_id: string
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          dedup_key: string
+          due_date?: string | null
+          id?: string
+          impact: string
+          kind: string
+          kpi_keys?: string[]
+          payload?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_no?: never
+          assignee_id?: string | null
+          baseline?: Json
+          brand_id?: string
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          dedup_key?: string
+          due_date?: string | null
+          id?: string
+          impact?: string
+          kind?: string
+          kpi_keys?: string[]
+          payload?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_conversations: {
         Row: {
           brand_id: string | null
@@ -1247,6 +1399,47 @@ export type Database = {
           },
         ]
       }
+      kpi_definitions: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kpi_key: string
+          target: number
+          timeframe: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kpi_key: string
+          target: number
+          timeframe?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kpi_key?: string
+          target?: number
+          timeframe?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_definitions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           anthropic_api_key_encrypted: string | null
@@ -2088,6 +2281,87 @@ export type Database = {
           },
         ]
       }
+      signals: {
+        Row: {
+          action_id: string | null
+          brand_id: string
+          category: string
+          change_value: number | null
+          created_at: string
+          current_value: number | null
+          dedup_key: string
+          detected_at: string
+          id: string
+          impact: string
+          kind: string
+          kpi_keys: string[]
+          last_detected_at: string
+          payload: Json
+          previous_value: number | null
+          resolved_at: string | null
+          source: string[]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          brand_id: string
+          category: string
+          change_value?: number | null
+          created_at?: string
+          current_value?: number | null
+          dedup_key: string
+          detected_at?: string
+          id?: string
+          impact: string
+          kind: string
+          kpi_keys?: string[]
+          last_detected_at?: string
+          payload?: Json
+          previous_value?: number | null
+          resolved_at?: string | null
+          source?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          brand_id?: string
+          category?: string
+          change_value?: number | null
+          created_at?: string
+          current_value?: number | null
+          dedup_key?: string
+          detected_at?: string
+          id?: string
+          impact?: string
+          kind?: string
+          kpi_keys?: string[]
+          last_detected_at?: string
+          payload?: Json
+          previous_value?: number | null
+          resolved_at?: string | null
+          source?: string[]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signals_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signals_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_audit_usage: {
         Row: {
           audit_id: string | null
@@ -2418,10 +2692,7 @@ export type Database = {
         }
         Returns: Json
       }
-      apply_prompt_locations: {
-        Args: { p_updates: Json }
-        Returns: number
-      }
+      apply_prompt_locations: { Args: { p_updates: Json }; Returns: number }
       citation_competitor_sources: {
         Args: {
           p_brand_domains: string[]
@@ -2597,6 +2868,23 @@ export type Database = {
           sent_count: number
         }[]
       }
+      ga_page_ai_visibility: {
+        Args: { p_brand_id: string; p_since: string }
+        Returns: {
+          ai_platforms: string[]
+          ai_sessions: number
+          citations: number
+          citing_prompts: number
+          engaged_sessions: number
+          engagement_seconds: number
+          key_events: number
+          landing_page: string
+          revenue: number
+          sessions: number
+          targeting_prompts: number
+          transactions: number
+        }[]
+      }
       get_latest_prompt_results:
         | {
             Args: { p_brand_id: string; p_platform?: string }
@@ -2665,23 +2953,6 @@ export type Database = {
               isSetofReturn: true
             }
           }
-      ga_page_ai_visibility: {
-        Args: { p_brand_id: string; p_since: string }
-        Returns: {
-          ai_platforms: string[]
-          ai_sessions: number
-          citations: number
-          citing_prompts: number
-          engaged_sessions: number
-          engagement_seconds: number
-          key_events: number
-          landing_page: string
-          revenue: number
-          sessions: number
-          targeting_prompts: number
-          transactions: number
-        }[]
-      }
       gsc_candidate_queries: {
         Args: { p_brand_id: string; p_min_impressions: number; p_since: string }
         Returns: {
@@ -2722,10 +2993,7 @@ export type Database = {
           regions: string[]
         }[]
       }
-      normalize_page_path: {
-        Args: { p_url: string }
-        Returns: string
-      }
+      normalize_page_path: { Args: { p_url: string }; Returns: string }
       org_prompt_location_usage: {
         Args: { p_organization_id: string }
         Returns: {
@@ -2870,6 +3138,10 @@ export type Database = {
         }
         Returns: Json
       }
+      signals_summary: {
+        Args: { p_brand_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
       topics_overview_aggregates: {
         Args: { p_brand_id: string }
         Returns: {
@@ -2922,10 +3194,7 @@ export type Database = {
         }
         Returns: number
       }
-      url_decode_safe: {
-        Args: { p_value: string }
-        Returns: string
-      }
+      url_decode_safe: { Args: { p_value: string }; Returns: string }
       visibility_rate_trend: {
         Args: {
           p_brand_id: string
@@ -3003,12 +3272,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3032,11 +3301,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3057,11 +3326,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3082,11 +3351,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3099,11 +3368,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
