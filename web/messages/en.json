@@ -843,8 +843,30 @@
       "active": "Active",
       "inactive": "Inactive",
       "noWebhook": "No webhook configured",
-      "setupFirst": "Set up a webhook to send opportunities to your workflow tools."
-    }
+      "setupFirst": "Set up a webhook to send opportunities to your workflow tools.",
+      "urlRequired": "Webhook URL is required",
+      "urlRequiredTest": "Enter a webhook URL first",
+      "saveError": "Failed to save webhook config"
+    },
+    "loadError": "Failed to load content opportunities",
+    "loadOpportunityError": "Failed to load opportunity",
+    "generatedToast": "Generated {count} opportunities",
+    "generationFailed": "Generation failed — please try again",
+    "generationTimedOut": "Generation timed out — please try again",
+    "generateError": "Failed to generate opportunities",
+    "sentToWorkflow": "Sent to workflow!",
+    "sendError": "Failed to send",
+    "dismissError": "Failed to dismiss",
+    "bulkSentToast": "Sent {sent} opportunities to workflow",
+    "bulkSendPartialError": "{failed} failed to send",
+    "bulkSendError": "Failed to send opportunities.",
+    "bulkDoneToast": "Marked {updated} opportunities as done",
+    "bulkUpdateError": "Bulk update failed",
+    "bulkDismissToast": "Dismissed {updated} opportunities",
+    "bulkDismissError": "Bulk dismiss failed",
+    "bulkDeleteError": "Bulk delete failed",
+    "briefGeneratedToast": "Content brief generated!",
+    "briefGenerateError": "Failed to generate brief"
   },
   "traffic": {
     "title": "AI Traffic Analytics",

@@ -223,7 +223,7 @@ export default function ContentPage() {
         return data.total;
       } catch (err) {
         console.error('Failed to load opportunities:', err);
-        toast.error('Failed to load content opportunities');
+        toast.error(t('loadError'));
         return 0;
       } finally {
         if (!isCancelled?.()) {
@@ -231,7 +231,7 @@ export default function ContentPage() {
         }
       }
     },
-    [activeBrandId, statusFilter, impactFilter, typeFilter, pager.start, debouncedSearch],
+    [activeBrandId, statusFilter, impactFilter, typeFilter, pager.start, debouncedSearch, t],
   );
 
   useEffect(() => {
@@ -268,7 +268,7 @@ export default function ContentPage() {
               pollRef.current = false;
               clearGenerationJob();
               setGenerating(false);
-              toast.success(`Generated ${status.result?.generated ?? 0} opportunities`);
+              toast.success(t('generatedToast', { count: status.result?.generated ?? 0 }));
               loadData();
               break;
             }
@@ -277,7 +277,7 @@ export default function ContentPage() {
               pollRef.current = false;
               clearGenerationJob();
               setGenerating(false);
-              toast.error(status.failedReason || 'Generation failed — please try again');
+              toast.error(status.failedReason || t('generationFailed'));
               break;
             }
 
@@ -285,7 +285,7 @@ export default function ContentPage() {
               pollRef.current = false;
               clearGenerationJob();
               setGenerating(false);
-              toast.error('Generation timed out — please try again');
+              toast.error(t('generationTimedOut'));
               break;
             }
           } catch {
@@ -296,7 +296,7 @@ export default function ContentPage() {
 
       poll();
     },
-    [loadData],
+    [loadData, t],
   );
   // Restore generation state from localStorage on mount
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function ContentPage() {
       pollJob(jobId, startedAt);
     } catch (err) {
       console.error('Generate failed:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to generate opportunities');
+      toast.error(err instanceof Error ? err.message : t('generateError'));
       setGenerating(false);
     }
   };
@@ -331,12 +331,12 @@ export default function ContentPage() {
       if (result.success === false) {
         toast.error(result.error);
       } else {
-        toast.success('Sent to workflow!');
+        toast.success(t('sentToWorkflow'));
         await loadData(true);
       }
     } catch (err) {
       console.error('Webhook send failed:', err);
-      toast.error('Failed to send');
+      toast.error(t('sendError'));
     } finally {
       setSendingId(null);
     }
@@ -361,7 +361,7 @@ export default function ContentPage() {
       });
     } catch (err) {
       console.error('Dismiss failed:', err);
-      toast.error('Failed to dismiss');
+      toast.error(t('dismissError'));
     }
   };
 
@@ -373,13 +373,13 @@ export default function ContentPage() {
         toast.error(result.error);
         return;
       }
-      toast.success(`Sent ${result.sent} opportunities to workflow`);
-      if (result.failed > 0) toast.error(`${result.failed} failed to send`);
+      toast.success(t('bulkSentToast', { sent: result.sent }));
+      if (result.failed > 0) toast.error(t('bulkSendPartialError', { failed: result.failed }));
       setSelectedIds(new Set());
       await loadData(true);
     } catch (err) {
       console.error('Bulk webhook send failed:', err);
-      toast.error('Failed to send opportunities.');
+      toast.error(t('bulkSendError'));
     } finally {
       setBulkSending(false);
     }
@@ -391,11 +391,11 @@ export default function ContentPage() {
     try {
       const ids = Array.from(selectedIds);
       const result = await bulkUpdateStatus(ids, 'done');
-      toast.success(`Marked ${result.updated} opportunities as done`);
+      toast.success(t('bulkDoneToast', { updated: result.updated }));
       setSelectedIds(new Set());
       await loadData(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk update failed');
+      toast.error(err instanceof Error ? err.message : t('bulkUpdateError'));
     } finally {
       setBulkSending(false);
     }
@@ -406,11 +406,11 @@ export default function ContentPage() {
     try {
       const ids = Array.from(selectedIds);
       const result = await bulkUpdateStatus(ids, 'dismissed');
-      toast.success(`Dismissed ${result.updated} opportunities`);
+      toast.success(t('bulkDismissToast', { updated: result.updated }));
       setSelectedIds(new Set());
       await loadData(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk dismiss failed');
+      toast.error(err instanceof Error ? err.message : t('bulkDismissError'));
     } finally {
       setBulkSending(false);
     }
@@ -428,7 +428,7 @@ export default function ContentPage() {
       // here as well would fire a second, competing load.
       await loadData(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk delete failed');
+      toast.error(err instanceof Error ? err.message : t('bulkDeleteError'));
     } finally {
       setBulkSending(false);
     }

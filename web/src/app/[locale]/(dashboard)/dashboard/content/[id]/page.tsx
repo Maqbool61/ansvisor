@@ -111,7 +111,7 @@ export default function ContentDetailPage() {
       })
       .catch((err) => {
         console.error('Failed to load opportunity:', err);
-        toast.error('Failed to load opportunity');
+        toast.error(t('loadOpportunityError'));
       })
       .finally(() => setLoading(false));
 
@@ -119,7 +119,7 @@ export default function ContentDetailPage() {
     getBriefQuota()
       .then(setQuota)
       .catch(() => setQuota(null));
-  }, [id]);
+  }, [id, t]);
 
   const handleSend = async () => {
     setSending(true);
@@ -128,13 +128,13 @@ export default function ContentDetailPage() {
       if (result.success === false) {
         toast.error(result.error);
       } else {
-        toast.success('Sent to workflow!');
+        toast.success(t('sentToWorkflow'));
         const updated = await getOpportunity(id);
         setOpportunity(updated);
       }
     } catch (err) {
       console.error('Send failed:', err);
-      toast.error('Failed to send');
+      toast.error(t('sendError'));
     } finally {
       setSending(false);
     }
@@ -160,7 +160,7 @@ export default function ContentDetailPage() {
         },
       });
     } catch {
-      toast.error('Failed to dismiss');
+      toast.error(t('dismissError'));
     }
   };
 
@@ -170,10 +170,10 @@ export default function ContentDetailPage() {
       const result = await generateBrief(id);
       setBrief(result.brief);
       if (result.quota) setQuota(result.quota);
-      toast.success('Content brief generated!');
+      toast.success(t('briefGeneratedToast'));
     } catch (err) {
       console.error('Brief generation failed:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to generate brief');
+      toast.error(err instanceof Error ? err.message : t('briefGenerateError'));
       // Refresh the counter — the failure may have been a quota rejection.
       getBriefQuota()
         .then(setQuota)

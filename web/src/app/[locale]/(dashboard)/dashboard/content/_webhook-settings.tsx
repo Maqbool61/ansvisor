@@ -55,7 +55,7 @@ export function WebhookSettingsDialog({ open, onOpenChange, brandId }: WebhookSe
 
   const handleSave = async () => {
     if (!url.trim()) {
-      toast.error('Webhook URL is required');
+      toast.error(t('urlRequired'));
       return;
     }
     setSaving(true);
@@ -69,7 +69,7 @@ export function WebhookSettingsDialog({ open, onOpenChange, brandId }: WebhookSe
       onOpenChange(false);
     } catch (err) {
       console.error('Save webhook failed:', err);
-      toast.error('Failed to save webhook config');
+      toast.error(t('saveError'));
     } finally {
       setSaving(false);
     }
@@ -77,7 +77,7 @@ export function WebhookSettingsDialog({ open, onOpenChange, brandId }: WebhookSe
 
   const handleTest = async () => {
     if (!url.trim()) {
-      toast.error('Enter a webhook URL first');
+      toast.error(t('urlRequiredTest'));
       return;
     }
     setTesting(true);
