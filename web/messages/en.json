@@ -60,7 +60,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "analytics": "Analytics",
-    "optimization": "Optimization"
+    "optimization": "Optimization",
+    "toggleMenu": "Toggle navigation menu"
   },
   "actionCenter": {
     "tabs": {
@@ -1405,7 +1406,9 @@
     "integrations_connected": "Connected",
     "integrations_notConfigured": "Not configured",
     "integrations_disconnect": "Disconnect",
-    "integrations_disconnectDescription": "The stored connection is removed for the whole organization. You can reconnect at any time."
+    "integrations_disconnectDescription": "The stored connection is removed for the whole organization. You can reconnect at any time.",
+    "removeMember": "Remove team member",
+    "invitationActions": "Invitation actions"
   },
   "brands": {
     "title": "Brands",

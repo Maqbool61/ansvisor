@@ -45,9 +45,13 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden" />}>
+      <SheetTrigger
+        render={
+          <Button variant="ghost" size="icon" className="md:hidden" aria-label={t('toggleMenu')} />
+        }
+      >
         <Menu className="h-5 w-5" />
-        <span className="sr-only">Toggle menu</span>
+        <span className="sr-only">{t('toggleMenu')}</span>
       </SheetTrigger>
       <SheetContent side="left" className="flex w-64 flex-col p-0">
         <div className="flex gap-2 h-16 items-center border-b px-4">

@@ -214,6 +214,7 @@ function MemberRow({
   isAdmin: boolean;
   onChanged: () => void;
 }) {
+  const t = useTranslations('settings');
   const [pendingRole, setPendingRole] = useState<TeamRole | null>(null);
   const [removing, setRemoving] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -294,7 +295,7 @@ function MemberRow({
         <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
           <DialogTrigger
             render={
-              <Button variant="ghost" size="icon-sm">
+              <Button variant="ghost" size="icon-sm" aria-label={t('removeMember')}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             }
@@ -336,6 +337,7 @@ function InvitationRow({
   isAdmin: boolean;
   onChanged: () => void;
 }) {
+  const t = useTranslations('settings');
   const [busy, setBusy] = useState<'revoke' | 'resend' | null>(null);
 
   async function handleRevoke() {
@@ -383,7 +385,12 @@ function InvitationRow({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="ghost" size="icon-sm" disabled={busy !== null}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={busy !== null}
+                aria-label={t('invitationActions')}
+              >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
